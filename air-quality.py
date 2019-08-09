@@ -2,6 +2,8 @@ import serial, time
 from Adafruit_IO import Client
 from twython import Twython
 
+PROBE_WRITING_DELAY = 10
+
 TWITTER_APP_KEY = 'YOUR_APP_KEY'
 TWITTER_APP_SECRET = 'YOUR_APP_SECRET'
 TWITTER_OAUTH_TOKEN = 'YOUR_OAUTH_TOKEN'
@@ -46,7 +48,7 @@ def main():
 	while True:
 		pm25, pm10 = takeMeasure()
 		sendAdafruit(pm25, pm10)
-		time.sleep(10)
+		time.sleep(PROBE_WRITING_DELAY)
 	
 if __name__ == '__main__':
     main()
