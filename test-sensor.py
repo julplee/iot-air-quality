@@ -1,7 +1,8 @@
 import serial, time
 
 # Create an instance of the serial manager of SDS011
-ser = serial.Serial('/dev/ttyUSB0')
+#ser = serial.Serial('/dev/ttyUSB0')
+ser = serial.Serial('COM4')
 
 while True:
     data = []
