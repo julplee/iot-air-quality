@@ -1,3 +1,4 @@
+import os
 import serial, time
 from Adafruit_IO import Client
 from twython import Twython
@@ -5,22 +6,38 @@ from twython import Twython
 PROBE_WRITING_DELAY = 10
 SERIAL_TIMEOUT = 5
 
-TWITTER_APP_KEY = 'YOUR_APP_KEY'
-TWITTER_APP_SECRET = 'YOUR_APP_SECRET'
-TWITTER_OAUTH_TOKEN = 'YOUR_OAUTH_TOKEN'
-TWITTER_OAUTH_TOKEN_SECRET = 'YOUR_OAUTH_TOKEN_SECRET'
-
-ADAFRUIT_IO_USERNAME = 'YOUR_AIO_USERNAME'
-ADAFRUIT_IO_KEY = 'YOUR_AIO_KEY'
-
-# Create an instance of the adafruit REST client.
-aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
-
-# Create an instance of the Twitter client.
-twitter = Twython(TWITTER_APP_KEY, TWITTER_APP_SECRET, TWITTER_OAUTH_TOKEN, TWITTER_OAUTH_TOKEN_SECRET)
+aio = None
+twitter = None
 
 # Create an instance of the serial manager of SDS011
 ser = serial.Serial('/dev/ttyUSB0', timeout=SERIAL_TIMEOUT)
+
+def require_env(name):
+	value = os.getenv(name)
+	if not value:
+		raise RuntimeError('Missing required environment variable: ' + name)
+	return value
+
+def configure_clients():
+	global aio, twitter
+
+	adafruit_io_username = require_env('ADAFRUIT_IO_USERNAME')
+	adafruit_io_key = require_env('ADAFRUIT_IO_KEY')
+	twitter_app_key = require_env('TWITTER_APP_KEY')
+	twitter_app_secret = require_env('TWITTER_APP_SECRET')
+	twitter_oauth_token = require_env('TWITTER_OAUTH_TOKEN')
+	twitter_oauth_token_secret = require_env('TWITTER_OAUTH_TOKEN_SECRET')
+
+	# Create an instance of the adafruit REST client.
+	aio = Client(adafruit_io_username, adafruit_io_key)
+
+	# Create an instance of the Twitter client.
+	twitter = Twython(
+		twitter_app_key,
+		twitter_app_secret,
+		twitter_oauth_token,
+		twitter_oauth_token_secret,
+	)
 
 def read_frame():
 	while True:
@@ -60,6 +77,7 @@ def sendTweet(pm25, pm10):
     twitter.update_status(status='For now, there are ' + str(pm25) + ' µg/m3 of PM2.5 and ' + str(pm10) + ' µg/m3 of PM10')
 
 def main():
+	configure_clients()
 	pm25, pm10 = takeMeasure()
 	sendTweet(pm25, pm10)
 
