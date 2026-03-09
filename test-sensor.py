@@ -1,10 +1,12 @@
+import os
 import serial, time
 
 SERIAL_TIMEOUT = 5
+DEFAULT_SERIAL_PORT = 'COM4'
 
 # Create an instance of the serial manager of SDS011
 #ser = serial.Serial('/dev/ttyUSB0')
-ser = serial.Serial('COM4', timeout=SERIAL_TIMEOUT)
+ser = serial.Serial(os.getenv('SDS011_SERIAL_PORT', DEFAULT_SERIAL_PORT), timeout=SERIAL_TIMEOUT)
 
 def read_frame():
     while True:

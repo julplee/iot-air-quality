@@ -14,6 +14,12 @@ Set these environment variables before launching the script:
 `TWITTER_OAUTH_TOKEN`
 `TWITTER_OAUTH_TOKEN_SECRET`
 
+Optional environment variables:
+
+`SDS011_SERIAL_PORT` defaults to `/dev/ttyUSB0` in `air-quality.py` and `COM4` in `test-sensor.py`
+`ADAFRUIT_IO_PM25_FEED` defaults to `kingswoodtwofive`
+`ADAFRUIT_IO_PM10_FEED` defaults to `kingswoodten`
+
 PowerShell example:
 `$env:ADAFRUIT_IO_USERNAME='your-username'`
 

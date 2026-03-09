@@ -7,13 +7,19 @@ from twython import Twython
 PROBE_WRITING_DELAY = 10
 ERROR_RETRY_DELAY = 5
 SERIAL_TIMEOUT = 5
+DEFAULT_SERIAL_PORT = '/dev/ttyUSB0'
+DEFAULT_PM25_FEED = 'kingswoodtwofive'
+DEFAULT_PM10_FEED = 'kingswoodten'
 
 aio = None
 twitter = None
+pm25_feed = None
+pm10_feed = None
 logger = logging.getLogger(__name__)
 
 # Create an instance of the serial manager of SDS011
-ser = serial.Serial('/dev/ttyUSB0', timeout=SERIAL_TIMEOUT)
+serial_port = os.getenv('SDS011_SERIAL_PORT', DEFAULT_SERIAL_PORT)
+ser = serial.Serial(serial_port, timeout=SERIAL_TIMEOUT)
 
 def require_env(name):
 	value = os.getenv(name)
@@ -22,7 +28,7 @@ def require_env(name):
 	return value
 
 def configure_clients():
-	global aio, twitter
+	global aio, twitter, pm25_feed, pm10_feed
 
 	adafruit_io_username = require_env('ADAFRUIT_IO_USERNAME')
 	adafruit_io_key = require_env('ADAFRUIT_IO_KEY')
@@ -30,6 +36,8 @@ def configure_clients():
 	twitter_app_secret = require_env('TWITTER_APP_SECRET')
 	twitter_oauth_token = require_env('TWITTER_OAUTH_TOKEN')
 	twitter_oauth_token_secret = require_env('TWITTER_OAUTH_TOKEN_SECRET')
+	pm25_feed = os.getenv('ADAFRUIT_IO_PM25_FEED', DEFAULT_PM25_FEED)
+	pm10_feed = os.getenv('ADAFRUIT_IO_PM10_FEED', DEFAULT_PM10_FEED)
 
 	# Create an instance of the adafruit REST client.
 	aio = Client(adafruit_io_username, adafruit_io_key)
@@ -72,8 +80,8 @@ def takeMeasure():
 
 # Send the recorded value to Adafruit IO
 def sendAdafruit(pm25, pm10): 
-	aio.send('kingswoodtwofive', pm25)
-	aio.send('kingswoodten', pm10)
+	aio.send(pm25_feed, pm25)
+	aio.send(pm10_feed, pm10)
 
 # Send a new status with value of PM2.5 and PM10
 def sendTweet(pm25, pm10):
