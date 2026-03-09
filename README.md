@@ -4,6 +4,8 @@ Code that handles IOT for Air Quality monitoring with Raspberry Pi
 ## Prerequisites
 `pip3 install pyserial adafruit-io twython`
 
+This project expects an SDS011 particulate matter sensor connected over a serial port. The production script reads SDS011 data frames, publishes PM2.5 and PM10 values to Adafruit IO, and posts one startup tweet with the first successful reading.
+
 ## Configuration
 Set these environment variables before launching the script:
 
@@ -21,7 +23,20 @@ Optional environment variables:
 `ADAFRUIT_IO_PM10_FEED` defaults to `kingswoodten`
 
 PowerShell example:
+`$env:SDS011_SERIAL_PORT='COM4'`
 `$env:ADAFRUIT_IO_USERNAME='your-username'`
+`$env:ADAFRUIT_IO_KEY='your-aio-key'`
+`$env:TWITTER_APP_KEY='your-app-key'`
+`$env:TWITTER_APP_SECRET='your-app-secret'`
+`$env:TWITTER_OAUTH_TOKEN='your-oauth-token'`
+`$env:TWITTER_OAUTH_TOKEN_SECRET='your-oauth-token-secret'`
+
+## Runtime behavior
+`air-quality.py` validates SDS011 frame headers, footers, and checksums before decoding measurements.
+
+If the sensor stops responding or a publish call fails, the script logs the error and retries instead of exiting. Serial reads time out after 5 seconds.
+
+`test-sensor.py` is a local console reader for checking raw SDS011 measurements on a serial port. It does not publish to Adafruit IO or Twitter.
 
 ## Launch the project
 `python3 air-quality.py`
