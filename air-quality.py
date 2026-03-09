@@ -3,6 +3,7 @@ import logging
 import serial, time
 from Adafruit_IO import Client
 from twython import Twython
+from twython.exceptions import TwythonError
 
 PROBE_WRITING_DELAY = 10
 ERROR_RETRY_DELAY = 5
@@ -10,6 +11,7 @@ SERIAL_TIMEOUT = 5
 DEFAULT_SERIAL_PORT = '/dev/ttyUSB0'
 DEFAULT_PM25_FEED = 'kingswoodtwofive'
 DEFAULT_PM10_FEED = 'kingswoodten'
+TWITTER_ENABLED = os.getenv('ENABLE_TWITTER', 'false').lower() == 'true'
 
 aio = None
 twitter = None
@@ -32,15 +34,20 @@ def configure_clients():
 
 	adafruit_io_username = require_env('ADAFRUIT_IO_USERNAME')
 	adafruit_io_key = require_env('ADAFRUIT_IO_KEY')
-	twitter_app_key = require_env('TWITTER_APP_KEY')
-	twitter_app_secret = require_env('TWITTER_APP_SECRET')
-	twitter_oauth_token = require_env('TWITTER_OAUTH_TOKEN')
-	twitter_oauth_token_secret = require_env('TWITTER_OAUTH_TOKEN_SECRET')
 	pm25_feed = os.getenv('ADAFRUIT_IO_PM25_FEED', DEFAULT_PM25_FEED)
 	pm10_feed = os.getenv('ADAFRUIT_IO_PM10_FEED', DEFAULT_PM10_FEED)
 
 	# Create an instance of the adafruit REST client.
 	aio = Client(adafruit_io_username, adafruit_io_key)
+
+	if not TWITTER_ENABLED:
+		logger.info('Twitter posting disabled; set ENABLE_TWITTER=true to enable startup tweets.')
+		return
+
+	twitter_app_key = require_env('TWITTER_APP_KEY')
+	twitter_app_secret = require_env('TWITTER_APP_SECRET')
+	twitter_oauth_token = require_env('TWITTER_OAUTH_TOKEN')
+	twitter_oauth_token_secret = require_env('TWITTER_OAUTH_TOKEN_SECRET')
 
 	# Create an instance of the Twitter client.
 	twitter = Twython(
@@ -85,6 +92,8 @@ def sendAdafruit(pm25, pm10):
 
 # Send a new status with value of PM2.5 and PM10
 def sendTweet(pm25, pm10):
+    if twitter is None:
+        return
     twitter.update_status(status='For now, there are ' + str(pm25) + ' µg/m3 of PM2.5 and ' + str(pm10) + ' µg/m3 of PM10')
 
 def main():
@@ -98,6 +107,8 @@ def main():
 		sendTweet(pm25, pm10)
 	except (TimeoutError, serial.SerialException) as exc:
 		logger.exception('Failed to read SDS011 data during startup: %s', exc)
+	except TwythonError as exc:
+		logger.error('Startup tweet failed: %s', exc)
 	except Exception as exc:
 		logger.exception('Failed to publish startup tweet: %s', exc)
 
