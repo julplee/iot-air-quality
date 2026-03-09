@@ -1,13 +1,16 @@
 import os
+import logging
 import serial, time
 from Adafruit_IO import Client
 from twython import Twython
 
 PROBE_WRITING_DELAY = 10
+ERROR_RETRY_DELAY = 5
 SERIAL_TIMEOUT = 5
 
 aio = None
 twitter = None
+logger = logging.getLogger(__name__)
 
 # Create an instance of the serial manager of SDS011
 ser = serial.Serial('/dev/ttyUSB0', timeout=SERIAL_TIMEOUT)
@@ -77,14 +80,30 @@ def sendTweet(pm25, pm10):
     twitter.update_status(status='For now, there are ' + str(pm25) + ' µg/m3 of PM2.5 and ' + str(pm10) + ' µg/m3 of PM10')
 
 def main():
+	logging.basicConfig(
+		level=logging.INFO,
+		format='%(asctime)s %(levelname)s %(message)s',
+	)
 	configure_clients()
-	pm25, pm10 = takeMeasure()
-	sendTweet(pm25, pm10)
+	try:
+		pm25, pm10 = takeMeasure()
+		sendTweet(pm25, pm10)
+	except (TimeoutError, serial.SerialException) as exc:
+		logger.exception('Failed to read SDS011 data during startup: %s', exc)
+	except Exception as exc:
+		logger.exception('Failed to publish startup tweet: %s', exc)
 
 	while True:
-		pm25, pm10 = takeMeasure()
-		sendAdafruit(pm25, pm10)
-		time.sleep(PROBE_WRITING_DELAY)
+		try:
+			pm25, pm10 = takeMeasure()
+			sendAdafruit(pm25, pm10)
+			time.sleep(PROBE_WRITING_DELAY)
+		except (TimeoutError, serial.SerialException) as exc:
+			logger.exception('SDS011 read failed: %s', exc)
+			time.sleep(ERROR_RETRY_DELAY)
+		except Exception as exc:
+			logger.exception('Failed to publish measurement: %s', exc)
+			time.sleep(ERROR_RETRY_DELAY)
 	
 if __name__ == '__main__':
     main()
