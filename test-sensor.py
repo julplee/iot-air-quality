@@ -1,18 +1,22 @@
 import serial, time
 
+SERIAL_TIMEOUT = 5
+
 # Create an instance of the serial manager of SDS011
 #ser = serial.Serial('/dev/ttyUSB0')
-ser = serial.Serial('COM4')
+ser = serial.Serial('COM4', timeout=SERIAL_TIMEOUT)
 
 def read_frame():
     while True:
         header = ser.read()
+        if not header:
+            raise TimeoutError('Timed out waiting for SDS011 frame header')
         if header != b'\xaa':
             continue
 
         frame = header + ser.read(9)
         if len(frame) != 10:
-            continue
+            raise TimeoutError('Timed out waiting for complete SDS011 frame')
 
         if frame[1] != 0xC0 or frame[9] != 0xAB:
             continue

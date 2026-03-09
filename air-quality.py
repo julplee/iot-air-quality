@@ -3,6 +3,7 @@ from Adafruit_IO import Client
 from twython import Twython
 
 PROBE_WRITING_DELAY = 10
+SERIAL_TIMEOUT = 5
 
 TWITTER_APP_KEY = 'YOUR_APP_KEY'
 TWITTER_APP_SECRET = 'YOUR_APP_SECRET'
@@ -19,17 +20,19 @@ aio = Client(ADAFRUIT_IO_USERNAME, ADAFRUIT_IO_KEY)
 twitter = Twython(TWITTER_APP_KEY, TWITTER_APP_SECRET, TWITTER_OAUTH_TOKEN, TWITTER_OAUTH_TOKEN_SECRET)
 
 # Create an instance of the serial manager of SDS011
-ser = serial.Serial('/dev/ttyUSB0')
+ser = serial.Serial('/dev/ttyUSB0', timeout=SERIAL_TIMEOUT)
 
 def read_frame():
 	while True:
 		header = ser.read()
+		if not header:
+			raise TimeoutError('Timed out waiting for SDS011 frame header')
 		if header != b'\xaa':
 			continue
 
 		frame = header + ser.read(9)
 		if len(frame) != 10:
-			continue
+			raise TimeoutError('Timed out waiting for complete SDS011 frame')
 
 		if frame[1] != 0xC0 or frame[9] != 0xAB:
 			continue
