@@ -4,14 +4,29 @@ import serial, time
 #ser = serial.Serial('/dev/ttyUSB0')
 ser = serial.Serial('COM4')
 
-while True:
-    data = []
-    for index in range(0,10):
-        datum = ser.read()
-        data.append(datum)
+def read_frame():
+    while True:
+        header = ser.read()
+        if header != b'\xaa':
+            continue
 
-    pm25 = int.from_bytes(b''.join(data[2:4]), byteorder='little') / 10
-    pm10 = int.from_bytes(b''.join(data[4:6]), byteorder='little') / 10
+        frame = header + ser.read(9)
+        if len(frame) != 10:
+            continue
+
+        if frame[1] != 0xC0 or frame[9] != 0xAB:
+            continue
+
+        checksum = sum(frame[2:8]) % 256
+        if frame[8] != checksum:
+            continue
+
+        return frame
+
+while True:
+    frame = read_frame()
+    pm25 = int.from_bytes(frame[2:4], byteorder='little') / 10
+    pm10 = int.from_bytes(frame[4:6], byteorder='little') / 10
 
     print(str(pm25) + ' µg/m3 of PM2.5 and ' + str(pm10) + ' µg/m3 of PM10')
     

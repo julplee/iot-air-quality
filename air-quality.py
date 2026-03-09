@@ -21,14 +21,29 @@ twitter = Twython(TWITTER_APP_KEY, TWITTER_APP_SECRET, TWITTER_OAUTH_TOKEN, TWIT
 # Create an instance of the serial manager of SDS011
 ser = serial.Serial('/dev/ttyUSB0')
 
-def takeMeasure():
-	data = []
-	for index in range(0,10):
-		datum = ser.read()
-		data.append(datum)
+def read_frame():
+	while True:
+		header = ser.read()
+		if header != b'\xaa':
+			continue
 
-	pm25 = int.from_bytes(b''.join(data[2:4]), byteorder='little') / 10
-	pm10 = int.from_bytes(b''.join(data[4:6]), byteorder='little') / 10
+		frame = header + ser.read(9)
+		if len(frame) != 10:
+			continue
+
+		if frame[1] != 0xC0 or frame[9] != 0xAB:
+			continue
+
+		checksum = sum(frame[2:8]) % 256
+		if frame[8] != checksum:
+			continue
+
+		return frame
+
+def takeMeasure():
+	frame = read_frame()
+	pm25 = int.from_bytes(frame[2:4], byteorder='little') / 10
+	pm10 = int.from_bytes(frame[4:6], byteorder='little') / 10
 
 	return pm25, pm10
 
