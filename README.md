@@ -1,6 +1,26 @@
 # iot-air-quality
 Code that handles IOT for Air Quality monitoring with Raspberry Pi
 
+## Running the Air Quality Script
+
+### Startup mechanism
+
+The script is automatically started at system boot using root's cron.
+
+The cron entry is:
+
+```bash
+sudo crontab -l
+```
+
+Expected entry:
+
+```bash
+@reboot sleep 30 && python3 /usr/lib/iot-air-quality/air-quality.py
+```
+
+The sleep 30 allows the system and network to finish initializing before the script starts.
+
 ## Prerequisites
 `pip3 install pyserial adafruit-io twython`
 
