@@ -26,6 +26,9 @@ The script now reads configuration from a `.env` file stored next to `air-qualit
 ## Prerequisites
 `pip3 install pyserial adafruit-io twython`
 
+For the SSD1306 display on Raspberry Pi, also install:
+`pip3 install adafruit-circuitpython-ssd1306 pillow`
+
 This project expects an SDS011 particulate matter sensor connected over a serial port. The production script reads SDS011 data frames and publishes PM2.5 and PM10 values to Adafruit IO. It can also post one startup tweet with the first successful reading when Twitter posting is enabled.
 
 ## Configuration
@@ -44,6 +47,10 @@ Optional environment variables:
 `ADAFRUIT_IO_PM25_FEED` defaults to `kingswoodtwofive`
 `ADAFRUIT_IO_PM10_FEED` defaults to `kingswoodten`
 `ENABLE_TWITTER` defaults to `false`; set it to `true` only if your X/Twitter API access level supports posting statuses
+`ENABLE_DISPLAY` defaults to `true`
+`DISPLAY_WIDTH` defaults to `128`
+`DISPLAY_HEIGHT` defaults to `64`
+`DISPLAY_I2C_ADDRESS` defaults to `0x3C`
 
 PowerShell example:
 `$env:SDS011_SERIAL_PORT='COM4'`
@@ -60,6 +67,10 @@ PowerShell example:
 `ADAFRUIT_IO_KEY=your-aio-key`
 `SDS011_SERIAL_PORT=/dev/ttyUSB0`
 `ENABLE_TWITTER=false`
+`ENABLE_DISPLAY=true`
+`DISPLAY_WIDTH=128`
+`DISPLAY_HEIGHT=64`
+`DISPLAY_I2C_ADDRESS=0x3C`
 
 ## Runtime behavior
 `air-quality.py` validates SDS011 frame headers, footers, and checksums before decoding measurements.
@@ -67,6 +78,8 @@ PowerShell example:
 If the sensor stops responding or a publish call fails, the script logs the error and retries instead of exiting. Serial reads time out after 5 seconds.
 
 Twitter posting is disabled by default so the collector can run with Adafruit IO only. When enabled, a Twitter/X API posting failure is logged but does not stop measurement uploads.
+
+When the SSD1306 dependencies are installed and the display is connected over I2C, the script shows startup state, the latest PM2.5 and PM10 values, and simple retry/error messages on the screen. If the display cannot be initialized, the collector keeps running and logs a warning.
 
 `test-sensor.py` is a local console reader for checking raw SDS011 measurements on a serial port. It does not publish to Adafruit IO or Twitter.
 
