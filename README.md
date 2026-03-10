@@ -21,13 +21,15 @@ Expected entry:
 
 The sleep 30 allows the system and network to finish initializing before the script starts.
 
+The script now reads configuration from a `.env` file stored next to `air-quality.py`. This is important when starting from cron because `@reboot` does not inherit your interactive shell environment.
+
 ## Prerequisites
 `pip3 install pyserial adafruit-io twython`
 
 This project expects an SDS011 particulate matter sensor connected over a serial port. The production script reads SDS011 data frames and publishes PM2.5 and PM10 values to Adafruit IO. It can also post one startup tweet with the first successful reading when Twitter posting is enabled.
 
 ## Configuration
-Set these environment variables before launching the script:
+Create a `.env` file next to `air-quality.py`, or export these variables before launching the script:
 
 `ADAFRUIT_IO_USERNAME`
 `ADAFRUIT_IO_KEY`
@@ -52,6 +54,12 @@ PowerShell example:
 `$env:TWITTER_APP_SECRET='your-app-secret'`
 `$env:TWITTER_OAUTH_TOKEN='your-oauth-token'`
 `$env:TWITTER_OAUTH_TOKEN_SECRET='your-oauth-token-secret'`
+
+`.env` example:
+`ADAFRUIT_IO_USERNAME=your-username`
+`ADAFRUIT_IO_KEY=your-aio-key`
+`SDS011_SERIAL_PORT=/dev/ttyUSB0`
+`ENABLE_TWITTER=false`
 
 ## Runtime behavior
 `air-quality.py` validates SDS011 frame headers, footers, and checksums before decoding measurements.

@@ -4,6 +4,7 @@ import serial, time
 from Adafruit_IO import Client
 from twython import Twython
 from twython.exceptions import TwythonError
+from env_loader import load_local_env
 
 PROBE_WRITING_DELAY = 10
 ERROR_RETRY_DELAY = 5
@@ -11,6 +12,9 @@ SERIAL_TIMEOUT = 5
 DEFAULT_SERIAL_PORT = '/dev/ttyUSB0'
 DEFAULT_PM25_FEED = 'kingswoodtwofive'
 DEFAULT_PM10_FEED = 'kingswoodten'
+
+load_local_env()
+
 TWITTER_ENABLED = os.getenv('ENABLE_TWITTER', 'false').lower() == 'true'
 
 aio = None

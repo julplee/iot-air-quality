@@ -1,8 +1,11 @@
 import os
 import serial, time
+from env_loader import load_local_env
 
 SERIAL_TIMEOUT = 5
 DEFAULT_SERIAL_PORT = 'COM4'
+
+load_local_env()
 
 # Create an instance of the serial manager of SDS011
 #ser = serial.Serial('/dev/ttyUSB0')
