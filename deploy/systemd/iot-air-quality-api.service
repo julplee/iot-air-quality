@@ -1,0 +1,17 @@
+[Unit]
+Description=IoT Air Quality API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=iotair
+Group=iotair
+WorkingDirectory=/opt/iot-air-quality/api
+EnvironmentFile=/etc/iot-air-quality/api.env
+ExecStart=/opt/iot-air-quality/api/iot-air-quality-api
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

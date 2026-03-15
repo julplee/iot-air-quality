@@ -62,6 +62,17 @@ export DB_DIALECT=sqlite
 export DB_PATH=./iot-air-quality.db
 ```
 
+## Deployment recommendation
+
+For this repository, the lowest-friction deployment is:
+
+- run the sensor collector on the Raspberry Pi with `systemd`
+- run this API with `systemd`
+- use `sqlite` first
+- optionally put Caddy in front if you need HTTPS
+
+See [`DEPLOYMENT.md`](/d:/dev/iot-air-quality/DEPLOYMENT.md) for the concrete setup, example env files, and `systemd` unit files.
+
 ### Build & run
 
 ```bash

@@ -91,3 +91,8 @@ When the SSD1306 dependencies are installed and the display is connected over I2
 
 ## Launch the project
 `python3 air-quality.py`
+
+## Deployment recommendation
+Use `systemd` on the Raspberry Pi instead of root cron for long-running operation.
+
+See [`DEPLOYMENT.md`](/d:/dev/iot-air-quality/DEPLOYMENT.md) for the recommended Pi and API deployment setup, example env files, and service units.

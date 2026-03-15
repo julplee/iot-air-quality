@@ -1,0 +1,17 @@
+[Unit]
+Description=IoT Air Quality Collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=julien
+Group=julien
+WorkingDirectory=/opt/iot-air-quality/app
+EnvironmentFile=/etc/iot-air-quality/app.env
+ExecStart=/opt/iot-air-quality/app/.venv/bin/python /opt/iot-air-quality/app/air-quality.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
