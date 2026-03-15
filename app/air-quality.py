@@ -30,7 +30,28 @@ DEFAULT_PM10_FEED = 'kingswoodten'
 DEFAULT_DISPLAY_WIDTH = 128
 DEFAULT_DISPLAY_HEIGHT = 64
 DEFAULT_DISPLAY_I2C_ADDRESS = 0x3C
+DEFAULT_DISPLAY_FONT_SIZE = 14
 DEFAULT_API_TIMEOUT = 5
+
+PM25_BREAKPOINTS = [
+	(9.0, 'GOOD', 0),
+	(35.4, 'MOD', 1),
+	(55.4, 'USG', 2),
+	(125.4, 'UNH', 3),
+	(225.4, 'VUNH', 4),
+	(float('inf'), 'HAZ', 5),
+]
+
+PM10_BREAKPOINTS = [
+	(54.0, 'GOOD', 0),
+	(154.0, 'MOD', 1),
+	(254.0, 'USG', 2),
+	(354.0, 'UNH', 3),
+	(424.0, 'VUNH', 4),
+	(float('inf'), 'HAZ', 5),
+]
+
+SEVERITY_LABELS = ['GOOD', 'MODERATE', 'SENSITIVE', 'UNHEALTHY', 'VERY UNH', 'HAZARDOUS']
 
 load_local_env()
 
@@ -112,7 +133,7 @@ def configure_display():
 		display = adafruit_ssd1306.SSD1306_I2C(width, height, i2c, addr=address)
 		display_image = Image.new('1', (display.width, display.height))
 		display_draw = ImageDraw.Draw(display_image)
-		display_font = ImageFont.load_default()
+		display_font = load_display_font()
 		display.fill(0)
 		display.show()
 		write_display('Air quality', 'Starting...', '')
@@ -122,6 +143,41 @@ def configure_display():
 		display_image = None
 		display_font = None
 		logger.exception('Failed to initialize SSD1306 display: %s', exc)
+
+def load_display_font():
+	font_size = int(os.getenv('DISPLAY_FONT_SIZE', DEFAULT_DISPLAY_FONT_SIZE))
+	font_path = os.getenv('DISPLAY_FONT_PATH')
+
+	candidate_paths = []
+	if font_path:
+		candidate_paths.append(font_path)
+
+	candidate_paths.extend([
+		'/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+		'/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+		'/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf',
+	])
+
+	for candidate in candidate_paths:
+		try:
+			return ImageFont.truetype(candidate, font_size)
+		except OSError:
+			continue
+
+	logger.warning(
+		'Falling back to PIL default font; set DISPLAY_FONT_PATH to a .ttf for a more readable display.'
+	)
+	return ImageFont.load_default()
+
+def classify_particulate(value, breakpoints):
+	for upper_bound, label, severity in breakpoints:
+		if value <= upper_bound:
+			return label, severity
+
+	return breakpoints[-1][1], breakpoints[-1][2]
+
+def format_particulate(value):
+	return f'{value:.1f}'
 
 def initialize_serial():
 	global ser
@@ -144,9 +200,32 @@ def write_display(line1, line2='', line3=''):
 		return
 
 	display_draw.rectangle((0, 0, display.width, display.height), outline=0, fill=0)
+	font_bbox = display_font.getbbox('Ag')
+	line_height = max((font_bbox[3] - font_bbox[1]) + 2, 12)
 	display_draw.text((0, 0), str(line1), font=display_font, fill=255)
-	display_draw.text((0, 16), str(line2), font=display_font, fill=255)
-	display_draw.text((0, 32), str(line3), font=display_font, fill=255)
+	display_draw.text((0, line_height), str(line2), font=display_font, fill=255)
+	display_draw.text((0, line_height * 2), str(line3), font=display_font, fill=255)
+	display.image(display_image)
+	display.show()
+
+def write_measurement_display(pm25, pm10):
+	if display is None or display_draw is None or display_image is None or display_font is None:
+		return
+
+	pm25_label, pm25_severity = classify_particulate(pm25, PM25_BREAKPOINTS)
+	pm10_label, pm10_severity = classify_particulate(pm10, PM10_BREAKPOINTS)
+	overall_severity = max(pm25_severity, pm10_severity)
+	overall_label = SEVERITY_LABELS[overall_severity]
+	font_bbox = display_font.getbbox('Ag')
+	line_height = max((font_bbox[3] - font_bbox[1]) + 2, 12)
+	top_fill = 255 if overall_severity >= 2 else 0
+	top_text_fill = 0 if overall_severity >= 2 else 255
+
+	display_draw.rectangle((0, 0, display.width, display.height), outline=0, fill=0)
+	display_draw.rectangle((0, 0, display.width, line_height), outline=top_fill, fill=top_fill)
+	display_draw.text((0, 0), overall_label[:12], font=display_font, fill=top_text_fill)
+	display_draw.text((0, line_height), 'P25 ' + format_particulate(pm25) + ' ' + pm25_label, font=display_font, fill=255)
+	display_draw.text((0, line_height * 2), 'P10 ' + format_particulate(pm10) + ' ' + pm10_label, font=display_font, fill=255)
 	display.image(display_image)
 	display.show()
 
@@ -237,7 +316,7 @@ def main():
 	try:
 		initialize_serial()
 		pm25, pm10 = takeMeasure()
-		write_display('Air quality', 'PM2.5: ' + str(pm25), 'PM10 : ' + str(pm10))
+		write_measurement_display(pm25, pm10)
 		sendTweet(pm25, pm10)
 	except (TimeoutError, serial.SerialException) as exc:
 		ser = None
@@ -252,7 +331,7 @@ def main():
 	while True:
 		try:
 			pm25, pm10 = takeMeasure()
-			write_display('Air quality', 'PM2.5: ' + str(pm25), 'PM10 : ' + str(pm10))
+			write_measurement_display(pm25, pm10)
 			publish_measurement(pm25, pm10)
 			time.sleep(PROBE_WRITING_DELAY)
 		except (TimeoutError, serial.SerialException) as exc:

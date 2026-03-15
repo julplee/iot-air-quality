@@ -53,6 +53,8 @@ Optional environment variables:
 `DISPLAY_WIDTH` defaults to `128`
 `DISPLAY_HEIGHT` defaults to `64`
 `DISPLAY_I2C_ADDRESS` defaults to `0x3C`
+`DISPLAY_FONT_PATH` optional; when set, the OLED renderer loads that `.ttf` file
+`DISPLAY_FONT_SIZE` defaults to `14`
 
 PowerShell example:
 `$env:SDS011_SERIAL_PORT='COM4'`
@@ -86,6 +88,8 @@ Adafruit IO and API publishing are attempted independently. If the Go API is una
 Twitter posting is disabled by default so the collector can run with Adafruit IO only. When enabled, a Twitter/X API posting failure is logged but does not stop measurement uploads.
 
 When the SSD1306 dependencies are installed and the display is connected over I2C, the script shows startup state, the latest PM2.5 and PM10 values, and simple retry/error messages on the screen. If the display cannot be initialized, the collector keeps running and logs a warning.
+
+On the monochrome SSD1306, measurement refreshes also show health-status labels based on the US EPA PM2.5 and PM10 AQI concentration breakpoints. The top row is inverted for `USG` and worse so poor air quality stands out even without color.
 
 `test-sensor.py` is a local console reader for checking raw SDS011 measurements on a serial port. It does not publish to Adafruit IO or Twitter.
 
