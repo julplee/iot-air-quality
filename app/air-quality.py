@@ -1,6 +1,8 @@
 import os
 import logging
+import json
 import serial, time
+from urllib import error, request
 from Adafruit_IO import Client
 from twython import Twython
 from twython.exceptions import TwythonError
@@ -28,6 +30,7 @@ DEFAULT_PM10_FEED = 'kingswoodten'
 DEFAULT_DISPLAY_WIDTH = 128
 DEFAULT_DISPLAY_HEIGHT = 64
 DEFAULT_DISPLAY_I2C_ADDRESS = 0x3C
+DEFAULT_API_TIMEOUT = 5
 
 load_local_env()
 
@@ -38,6 +41,8 @@ aio = None
 twitter = None
 pm25_feed = None
 pm10_feed = None
+api_base_url = None
+api_timeout = DEFAULT_API_TIMEOUT
 display = None
 display_draw = None
 display_image = None
@@ -55,15 +60,22 @@ def require_env(name):
 	return value
 
 def configure_clients():
-	global aio, twitter, pm25_feed, pm10_feed
+	global aio, twitter, pm25_feed, pm10_feed, api_base_url, api_timeout
 
 	adafruit_io_username = require_env('ADAFRUIT_IO_USERNAME')
 	adafruit_io_key = require_env('ADAFRUIT_IO_KEY')
 	pm25_feed = os.getenv('ADAFRUIT_IO_PM25_FEED', DEFAULT_PM25_FEED)
 	pm10_feed = os.getenv('ADAFRUIT_IO_PM10_FEED', DEFAULT_PM10_FEED)
+	api_base_url = os.getenv('API_BASE_URL', '').rstrip('/')
+	api_timeout = float(os.getenv('API_TIMEOUT_SECONDS', DEFAULT_API_TIMEOUT))
 
 	# Create an instance of the adafruit REST client.
 	aio = Client(adafruit_io_username, adafruit_io_key)
+
+	if api_base_url:
+		logger.info('API publishing enabled for %s', api_base_url)
+	else:
+		logger.info('API publishing disabled; set API_BASE_URL to enable Go API uploads.')
 
 	if not TWITTER_ENABLED:
 		logger.info('Twitter posting disabled; set ENABLE_TWITTER=true to enable startup tweets.')
@@ -156,11 +168,45 @@ def sendAdafruit(pm25, pm10):
 	aio.send(pm25_feed, pm25)
 	aio.send(pm10_feed, pm10)
 
+def post_api_metric(metric_name, value):
+	if not api_base_url:
+		return
+
+	endpoint = api_base_url + '/' + metric_name
+	body = json.dumps({'value': value}).encode('utf-8')
+	req = request.Request(
+		endpoint,
+		data=body,
+		headers={'Content-Type': 'application/json'},
+		method='POST',
+	)
+
+	with request.urlopen(req, timeout=api_timeout) as response:
+		if response.status < 200 or response.status >= 300:
+			raise RuntimeError('API returned HTTP ' + str(response.status) + ' for ' + metric_name)
+
+def sendAPI(pm25, pm10):
+	post_api_metric('pm25', pm25)
+	post_api_metric('pm10', pm10)
+
 # Send a new status with value of PM2.5 and PM10
 def sendTweet(pm25, pm10):
     if twitter is None:
         return
     twitter.update_status(status='For now, there are ' + str(pm25) + ' µg/m3 of PM2.5 and ' + str(pm10) + ' µg/m3 of PM10')
+
+def publish_measurement(pm25, pm10):
+	try:
+		sendAdafruit(pm25, pm10)
+	except Exception as exc:
+		logger.exception('Failed to publish measurement to Adafruit IO: %s', exc)
+
+	try:
+		sendAPI(pm25, pm10)
+	except (error.URLError, error.HTTPError, TimeoutError, RuntimeError) as exc:
+		logger.warning('Failed to publish measurement to API: %s', exc)
+	except Exception as exc:
+		logger.exception('Unexpected API publish failure: %s', exc)
 
 def main():
 	logging.basicConfig(
@@ -186,7 +232,7 @@ def main():
 		try:
 			pm25, pm10 = takeMeasure()
 			write_display('Air quality', 'PM2.5: ' + str(pm25), 'PM10 : ' + str(pm10))
-			sendAdafruit(pm25, pm10)
+			publish_measurement(pm25, pm10)
 			time.sleep(PROBE_WRITING_DELAY)
 		except (TimeoutError, serial.SerialException) as exc:
 			write_display('Air quality', 'Sensor error', 'Retrying...')
