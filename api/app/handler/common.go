@@ -5,6 +5,12 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"strconv"
+)
+
+const (
+	defaultListLimit = 100
+	maxListLimit     = 1000
 )
 
 func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
@@ -33,4 +39,37 @@ func validateMetricValue(value float64) error {
 	default:
 		return nil
 	}
+}
+
+func parsePagination(r *http.Request) (int, int, error) {
+	query := r.URL.Query()
+
+	limit := defaultListLimit
+	if rawLimit := query.Get("limit"); rawLimit != "" {
+		parsedLimit, err := strconv.Atoi(rawLimit)
+		if err != nil {
+			return 0, 0, errors.New("limit must be a valid integer")
+		}
+		if parsedLimit <= 0 {
+			return 0, 0, errors.New("limit must be greater than 0")
+		}
+		if parsedLimit > maxListLimit {
+			return 0, 0, errors.New("limit must be less than or equal to 1000")
+		}
+		limit = parsedLimit
+	}
+
+	offset := 0
+	if rawOffset := query.Get("offset"); rawOffset != "" {
+		parsedOffset, err := strconv.Atoi(rawOffset)
+		if err != nil {
+			return 0, 0, errors.New("offset must be a valid integer")
+		}
+		if parsedOffset < 0 {
+			return 0, 0, errors.New("offset must be greater than or equal to 0")
+		}
+		offset = parsedOffset
+	}
+
+	return limit, offset, nil
 }

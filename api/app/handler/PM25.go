@@ -17,14 +17,20 @@ type createPM25Request struct {
 const maxPM25BodyBytes int64 = 1024
 
 func GetAllPM25(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	PM25s := []model.PM25{}
+	pm25s := []model.PM25{}
 
-	if err := db.Find(&PM25s).Error; err != nil {
+	limit, offset, err := parsePagination(r)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&pm25s).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondJSON(w, http.StatusOK, PM25s)
+	respondJSON(w, http.StatusOK, pm25s)
 }
 
 func CreatePM25(db *gorm.DB, w http.ResponseWriter, r *http.Request) {

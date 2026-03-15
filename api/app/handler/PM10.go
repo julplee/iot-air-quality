@@ -19,7 +19,13 @@ const maxPM10BodyBytes int64 = 1024
 func GetAllPM10(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	pm10s := []model.PM10{}
 
-	if err := db.Find(&pm10s).Error; err != nil {
+	limit, offset, err := parsePagination(r)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	if err := db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&pm10s).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

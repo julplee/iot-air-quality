@@ -13,6 +13,12 @@ Available endpoints:
 - `GET /pm10`
 - `POST /pm10`
 
+List endpoints support:
+
+- `limit` optional, default `100`, max `1000`
+- `offset` optional, default `0`
+- results ordered by newest first
+
 ## Installation & run
 
 ### Download this project
