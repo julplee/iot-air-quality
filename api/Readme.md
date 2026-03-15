@@ -31,7 +31,7 @@ go mod tidy
 
 Before running API server, configure the database with environment variables.
 
-Required:
+Required for MySQL:
 
 ```bash
 export DB_PASSWORD=your-database-password
@@ -48,6 +48,18 @@ export DB_NAME=iot-air-quality
 export DB_CHARSET=utf8
 export SERVER_ADDRESS=:3000
 export SHUTDOWN_TIMEOUT_SECONDS=10
+```
+
+Supported database dialects:
+
+- `mysql` uses `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`, `DB_CHARSET`
+- `sqlite` uses `DB_PATH` and ignores the MySQL-specific settings
+
+SQLite example:
+
+```bash
+export DB_DIALECT=sqlite
+export DB_PATH=./iot-air-quality.db
 ```
 
 ### Build & run

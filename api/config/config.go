@@ -21,6 +21,7 @@ type DBConfig struct {
 	Password string
 	Name     string
 	Charset  string
+	Path     string
 }
 
 // ServerConfig contains the configuration of the HTTP server
@@ -31,9 +32,14 @@ type ServerConfig struct {
 
 // GetConfig gets the configuration of the database
 func GetConfig() (*Config, error) {
-	password := os.Getenv("DB_PASSWORD")
-	if password == "" {
-		return nil, fmt.Errorf("DB_PASSWORD is required")
+	dialect := getEnv("DB_DIALECT", "mysql")
+
+	var password string
+	if dialect == "mysql" {
+		password = os.Getenv("DB_PASSWORD")
+		if password == "" {
+			return nil, fmt.Errorf("DB_PASSWORD is required when DB_DIALECT=mysql")
+		}
 	}
 
 	port, err := getEnvAsInt("DB_PORT", 3306)
@@ -43,13 +49,14 @@ func GetConfig() (*Config, error) {
 
 	return &Config{
 		DB: &DBConfig{
-			Dialect:  getEnv("DB_DIALECT", "mysql"),
+			Dialect:  dialect,
 			Host:     getEnv("DB_HOST", "127.0.0.1"),
 			Port:     port,
 			Username: getEnv("DB_USERNAME", "guest"),
 			Password: password,
 			Name:     getEnv("DB_NAME", "iot-air-quality"),
 			Charset:  getEnv("DB_CHARSET", "utf8"),
+			Path:     getEnv("DB_PATH", "iot-air-quality.db"),
 		},
 		Server: &ServerConfig{
 			Address:                getEnv("SERVER_ADDRESS", ":3000"),

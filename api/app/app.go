@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/julplee/iot-air-quality-api/app/model"
 	"github.com/julplee/iot-air-quality-api/config"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -28,15 +30,7 @@ type App struct {
 
 // Initialize initializes the app with predefined configuration
 func (a *App) Initialize(config *config.Config) error {
-	dbURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True",
-		config.DB.Username,
-		config.DB.Password,
-		config.DB.Host,
-		config.DB.Port,
-		config.DB.Name,
-		config.DB.Charset)
-
-	db, err := gorm.Open(mysql.Open(dbURI), &gorm.Config{})
+	db, err := openDB(config.DB)
 	if err != nil {
 		return fmt.Errorf("could not connect to database: %w", err)
 	}
@@ -55,6 +49,25 @@ func (a *App) Initialize(config *config.Config) error {
 	a.shutdownTimout = time.Duration(config.Server.ShutdownTimeoutSeconds) * time.Second
 
 	return nil
+}
+
+func openDB(dbConfig *config.DBConfig) (*gorm.DB, error) {
+	switch strings.ToLower(dbConfig.Dialect) {
+	case "mysql":
+		dbURI := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True",
+			dbConfig.Username,
+			dbConfig.Password,
+			dbConfig.Host,
+			dbConfig.Port,
+			dbConfig.Name,
+			dbConfig.Charset)
+
+		return gorm.Open(mysql.Open(dbURI), &gorm.Config{})
+	case "sqlite":
+		return gorm.Open(sqlite.Open(dbConfig.Path), &gorm.Config{})
+	default:
+		return nil, fmt.Errorf("unsupported DB_DIALECT %q; supported values are mysql and sqlite", dbConfig.Dialect)
+	}
 }
 
 func (a *App) setRouters() {
