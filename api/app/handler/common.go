@@ -2,6 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"math"
 	"net/http"
 )
 
@@ -20,4 +22,15 @@ func respondJSON(w http.ResponseWriter, status int, payload interface{}) {
 
 func respondError(w http.ResponseWriter, code int, message string) {
 	respondJSON(w, code, map[string]string{"error": message})
+}
+
+func validateMetricValue(value float64) error {
+	switch {
+	case math.IsNaN(value), math.IsInf(value, 0):
+		return errors.New("value must be a finite number")
+	case value < 0:
+		return errors.New("value must be greater than or equal to 0")
+	default:
+		return nil
+	}
 }

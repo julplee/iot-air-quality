@@ -62,6 +62,8 @@ func (a *App) setRouters() {
 	a.Router.HandleFunc("/readyz", a.readyHandler).Methods("GET")
 	a.Get("/pm25", a.handleRequest(handler.GetAllPM25))
 	a.Post("/pm25", a.handleRequest(handler.CreatePM25))
+	a.Get("/pm10", a.handleRequest(handler.GetAllPM10))
+	a.Post("/pm10", a.handleRequest(handler.CreatePM10))
 }
 
 // Get wraps the router for GET HTTP method

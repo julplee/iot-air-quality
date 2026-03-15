@@ -10,29 +10,29 @@ import (
 	"gorm.io/gorm"
 )
 
-type createPM25Request struct {
+type createPM10Request struct {
 	Value float64 `json:"value"`
 }
 
-const maxPM25BodyBytes int64 = 1024
+const maxPM10BodyBytes int64 = 1024
 
-func GetAllPM25(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
-	PM25s := []model.PM25{}
+func GetAllPM10(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+	pm10s := []model.PM10{}
 
-	if err := db.Find(&PM25s).Error; err != nil {
+	if err := db.Find(&pm10s).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondJSON(w, http.StatusOK, PM25s)
+	respondJSON(w, http.StatusOK, pm10s)
 }
 
-func CreatePM25(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func CreatePM10(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxPM25BodyBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, maxPM10BodyBytes)
 
-	request := createPM25Request{}
+	request := createPM10Request{}
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 
@@ -51,14 +51,14 @@ func CreatePM25(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pm25 := model.PM25{
+	pm10 := model.PM10{
 		Value: request.Value,
 	}
 
-	if err := db.Create(&pm25).Error; err != nil {
+	if err := db.Create(&pm10).Error; err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondJSON(w, http.StatusCreated, pm25)
+	respondJSON(w, http.StatusCreated, pm10)
 }

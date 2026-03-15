@@ -4,6 +4,15 @@ see: <https://github.com/julplee/iot-air-quality>
 
 A RESTful API to store IOT metrics with Go using gorilla/mux (API library) and Gorm (ORM for Go)
 
+Available endpoints:
+
+- `GET /healthz`
+- `GET /readyz`
+- `GET /pm25`
+- `POST /pm25`
+- `GET /pm10`
+- `POST /pm10`
+
 ## Installation & run
 
 ### Download this project
