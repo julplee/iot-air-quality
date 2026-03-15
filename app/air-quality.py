@@ -49,9 +49,8 @@ display_image = None
 display_font = None
 logger = logging.getLogger(__name__)
 
-# Create an instance of the serial manager of SDS011
 serial_port = os.getenv('SDS011_SERIAL_PORT', DEFAULT_SERIAL_PORT)
-ser = serial.Serial(serial_port, timeout=SERIAL_TIMEOUT)
+ser = None
 
 def require_env(name):
 	value = os.getenv(name)
@@ -124,6 +123,22 @@ def configure_display():
 		display_font = None
 		logger.exception('Failed to initialize SSD1306 display: %s', exc)
 
+def initialize_serial():
+	global ser
+
+	if ser is not None and ser.is_open:
+		return ser
+
+	if ser is not None:
+		try:
+			ser.close()
+		except Exception:
+			pass
+
+	logger.info('Opening SDS011 serial port %s', serial_port)
+	ser = serial.Serial(serial_port, timeout=SERIAL_TIMEOUT)
+	return ser
+
 def write_display(line1, line2='', line3=''):
 	if display is None or display_draw is None or display_image is None or display_font is None:
 		return
@@ -136,6 +151,8 @@ def write_display(line1, line2='', line3=''):
 	display.show()
 
 def read_frame():
+	initialize_serial()
+
 	while True:
 		header = ser.read()
 		if not header:
@@ -209,6 +226,8 @@ def publish_measurement(pm25, pm10):
 		logger.exception('Unexpected API publish failure: %s', exc)
 
 def main():
+	global ser
+
 	logging.basicConfig(
 		level=logging.INFO,
 		format='%(asctime)s %(levelname)s %(message)s',
@@ -216,10 +235,12 @@ def main():
 	configure_clients()
 	configure_display()
 	try:
+		initialize_serial()
 		pm25, pm10 = takeMeasure()
 		write_display('Air quality', 'PM2.5: ' + str(pm25), 'PM10 : ' + str(pm10))
 		sendTweet(pm25, pm10)
 	except (TimeoutError, serial.SerialException) as exc:
+		ser = None
 		write_display('Air quality', 'Sensor error', 'Retrying...')
 		logger.exception('Failed to read SDS011 data during startup: %s', exc)
 	except TwythonError as exc:
@@ -235,6 +256,7 @@ def main():
 			publish_measurement(pm25, pm10)
 			time.sleep(PROBE_WRITING_DELAY)
 		except (TimeoutError, serial.SerialException) as exc:
+			ser = None
 			write_display('Air quality', 'Sensor error', 'Retrying...')
 			logger.exception('SDS011 read failed: %s', exc)
 			time.sleep(ERROR_RETRY_DELAY)
